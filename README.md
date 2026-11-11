@@ -74,6 +74,13 @@ produces a revised proposal requiring a second approval. A stale decision from
 another tab is refused; refresh before deciding. The approval control resumes
 the real LangGraph interrupt and saves the resulting reservations.
 
+After approving any rescue, use **Plans changed? Redirect the pickup** to select
+an assigned driver and click **Cancel driver & replan**. The same saved workflow
+releases this donation's reservations, excludes the cancelled driver, and shows a
+before/after driver summary with updated pickup cards and map. The replacement
+plan requires fresh approval. If no replacement is feasible, the app explains
+that coordinator help is needed. This simulation supports pre-pickup cancellation.
+
 The Agent activity tab shows tool calls and planning history. The Evaluation lab
 runs local metrics or uploads an experiment to LangSmith. Evaluation approvals
 are simulated separately and never approve the rescue on the dispatch board.

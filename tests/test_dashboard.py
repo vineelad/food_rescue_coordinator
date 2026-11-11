@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from food_rescue.dashboard import decide_rescue, load_rescue, recent_rescues, start_rescue
+from food_rescue.dashboard import cancel_and_replan, decide_rescue, load_rescue, recent_rescues, start_rescue
 from food_rescue.scenarios import scenarios
 
 
@@ -88,3 +88,40 @@ def test_app_evaluation_does_not_approve_active_rescue():
     assert len(at.session_state.eval_rows) == 8
     assert at.session_state.rescue["checkpoint_id"] == original["checkpoint_id"]
     assert at.session_state.rescue["pending_approval"]
+
+
+def test_app_manual_cancellation_redirects_and_requires_approval():
+    at = app()
+    plan_from_app(at)
+    at.button(key="approve_pickups").click().run()
+    old = deepcopy(at.session_state.rescue)
+    cancelled = old["state"]["plan"]["legs"][0]["driver_id"]
+    at.selectbox(key="cancel_driver").select(cancelled).run()
+    at.button(key="cancel_and_replan").click().run()
+    assert not at.exception
+    revised = at.session_state.rescue
+    assert revised["thread_id"] == old["thread_id"]
+    assert revised["pending_approval"]
+    assert not revised["state"]["world"]["reservations"]
+    assert revised["state"]["previous_plan"]["legs"] == old["state"]["plan"]["legs"]
+    assert all(leg["driver_id"] != cancelled for leg in revised["state"]["plan"]["legs"])
+    with pytest.raises(ValueError, match="changed"):
+        cancel_and_replan(old["thread_id"], cancelled, old["checkpoint_id"])
+    at.button(key="approve_pickups").click().run()
+    assert not at.exception
+    assert at.session_state.rescue["state"]["status"] == "scheduled"
+
+
+def test_manual_cancellation_with_no_replacement_preserves_other_bookings():
+    inputs = case("existing_booking")
+    for driver in inputs["world"]["drivers"]:
+        driver["available"] = driver["id"] == "d2"
+    inputs["donation"]["quantity"] = 20
+    rescue = start_rescue(inputs, "baseline")
+    scheduled = decide_rescue(rescue["thread_id"], True, rescue["checkpoint_id"])
+    with pytest.raises(ValueError, match="assigned"):
+        cancel_and_replan(scheduled["thread_id"], "d3", scheduled["checkpoint_id"])
+    revised = cancel_and_replan(scheduled["thread_id"], "d2", scheduled["checkpoint_id"])
+    assert revised["state"]["status"] == "no_feasible_plan"
+    assert revised["state"]["world"]["reservations"] == inputs["world"]["reservations"]
+    assert not revised["pending_approval"]

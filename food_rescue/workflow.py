@@ -14,6 +14,7 @@ class DispatchState(TypedDict, total=False):
     donation: dict
     planner: str
     plan: dict
+    previous_plan: dict
     status: str
     approved: bool
     cancel_driver_id: str
@@ -50,6 +51,7 @@ def build_graph(checkpointer=None, model=None):
 
     def event(state):
         return {"world": cancel_driver(state["world"], state["donation"], state["cancel_driver_id"]),
+                "previous_plan": state["plan"],
                 "event_applied": True, "approved": False, "status": "replanning",
                 "history": state.get("history", []) + [{"event": "driver_cancelled", "driver_id": state["cancel_driver_id"]}]}
 

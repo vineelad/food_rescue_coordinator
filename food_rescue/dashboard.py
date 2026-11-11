@@ -68,6 +68,28 @@ def decide_rescue(thread_id: str, approved: bool, checkpoint_id: str) -> dict:
         return _snapshot(graph, thread_id)
 
 
+def cancel_and_replan(thread_id: str, driver_id: str, checkpoint_id: str) -> dict:
+    """Re-enter the saved event node for a coordinator-requested cancellation."""
+    with _LOCK, SqliteSaver.from_conn_string(str(database_path())) as saver:
+        graph = build_graph(saver)
+        current = _snapshot(graph, thread_id)
+        if current["checkpoint_id"] != checkpoint_id:
+            raise ValueError("This plan changed in another tab. Refresh it before cancelling.")
+        state = current["state"]
+        if state["status"] != "scheduled" or current["pending_approval"]:
+            raise ValueError("Approve a pickup plan before cancelling an assigned driver.")
+        bookings = [r for r in state["world"]["reservations"]
+                    if r["donation_id"] == state["donation"]["id"] and r["driver_id"] == driver_id]
+        if not bookings:
+            raise ValueError("Choose a driver assigned to this rescue.")
+        if state["world"]["now"] >= min(r["pickup_at"] for r in bookings):
+            raise ValueError("This demo supports cancellations before pickup only.")
+        graph.update_state(config(thread_id), {"cancel_driver_id": driver_id, "event_applied": False},
+                           as_node="schedule")
+        graph.invoke(None, config(thread_id))
+        return _snapshot(graph, thread_id)
+
+
 def recent_rescues(limit: int = 15) -> list[dict]:
     path = database_path()
     if not path.exists():

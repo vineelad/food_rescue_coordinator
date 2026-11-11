@@ -12,7 +12,7 @@ import pydeck as pdk
 import streamlit as st
 from dotenv import load_dotenv
 
-from food_rescue.dashboard import decide_rescue, load_rescue, recent_rescues, start_rescue
+from food_rescue.dashboard import cancel_and_replan, decide_rescue, load_rescue, recent_rescues, start_rescue
 from food_rescue.evaluation import run_case, run_langsmith, score
 from food_rescue.scenarios import scenarios
 from food_rescue.simulation import NEIGHBORHOODS, by_id, make_world
@@ -190,6 +190,17 @@ def rescue_board(rescue):
             st.warning("A driver cancelled. The earlier reservations were released. This revised plan needs a fresh decision.")
         else:
             st.caption("A driver cancelled earlier. This rescue reflects the revised plan.")
+        previous = state.get("previous_plan", {})
+        if previous.get("legs"):
+            st.markdown("#### How the pickup was redirected")
+            names = {d["id"]: d["name"] for d in world["drivers"]}
+            old_drivers = sorted({leg["driver_id"] for leg in previous["legs"]})
+            new_drivers = sorted({leg["driver_id"] for leg in plan.get("legs", [])})
+            cancelled = names.get(state.get("cancel_driver_id"), "Previous driver")
+            st.write(f"**{cancelled} cancelled.** The earlier reservations were released.")
+            st.write("**Before:** " + ", ".join(names[d] for d in old_drivers))
+            st.write("**Revised:** " + (", ".join(names[d] for d in new_drivers) or "No replacement available — coordinator help needed."))
+            st.caption("The map and pickup cards show the revised proposal. Review and approve it before new reservations are made.")
     restaurant = by_id(world["restaurants"], donation["restaurant_id"])
     st.markdown(f"**{restaurant['name']}** · {donation['food_type'].title()} · {clock(donation['pickup_start'])}–{clock(donation['pickup_end'])}")
     st.html('<div class="stepbar">① Donation received &nbsp; → &nbsp; ② Plan checked &nbsp; → &nbsp; ③ Coordinator approval &nbsp; → &nbsp; ④ Pickups scheduled</div>')
@@ -216,6 +227,22 @@ def rescue_board(rescue):
                 st.rerun()
             except Exception as exc:
                 notice_error(exc)
+    if status == "scheduled" and not rescue["pending_approval"]:
+        with st.container(border=True):
+            st.markdown("#### Plans changed? Redirect the pickup.")
+            st.caption("Before pickup, cancel an assigned driver and find a replacement. The revised plan will need your approval.")
+            assigned = sorted({r["driver_id"] for r in world["reservations"]
+                               if r["donation_id"] == donation["id"]})
+            driver_id = st.selectbox("Driver who cancelled", assigned,
+                                     format_func=lambda d: by_id(world["drivers"], d)["name"],
+                                     key="cancel_driver")
+            if st.button("Cancel driver & replan", key="cancel_and_replan", width="stretch"):
+                try:
+                    with st.spinner("Releasing the earlier reservations and finding a new pickup plan…"):
+                        set_active(cancel_and_replan(thread_id, driver_id, rescue["checkpoint_id"]))
+                    st.rerun()
+                except Exception as exc:
+                    notice_error(exc)
     if st.button("Refresh saved plan", key="refresh_plan"):
         set_active(load_rescue(thread_id))
         st.rerun()
