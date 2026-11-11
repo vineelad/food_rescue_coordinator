@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sf-food-rescue"
+version = "0.1.0"
+description = "An evaluated, human-approved food rescue dispatch agent for a simulated San Francisco"
+requires-python = ">=3.11"
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[tool.setuptools.packages.find]
+include = ["food_rescue*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

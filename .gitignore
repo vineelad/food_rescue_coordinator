@@ -1,0 +1,11 @@
+.venv/
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+__pycache__/
+.pytest_cache/
+*.egg-info/
+.runs/
+*.sqlite*
+eval-results*.json
