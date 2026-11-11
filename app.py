@@ -100,6 +100,7 @@ def dispatch_settings():
         st.caption("10 kitchens · 6 shelters · 5 drivers")
         st.caption("Mission / SoMa / Tenderloin / Chinatown / Bayview")
         st.caption("All participants and logistics are fictional. Schedules use Pacific time.")
+        st.caption("Release 0.3.1 · In-app driver cancellation and redirection enabled")
 
 
 def intake():
@@ -111,16 +112,18 @@ def intake():
                             format_func=lambda n: n.replace("_", " ").title(), key="scenario_choice")
     case = cases[selected]
     inputs = deepcopy(case["inputs"])
+    custom = st.checkbox("Customize this donation", key="customize")
     with st.form("new_rescue"):
-        custom = st.checkbox("Customize this donation", key="customize")
-        quantity = st.number_input("Boxed meals", min_value=1, max_value=500, value=inputs["donation"]["quantity"], step=5)
+        quantity = st.number_input("Boxed meals", min_value=1, max_value=500, value=inputs["donation"]["quantity"], step=5,
+                                   disabled=not custom)
         restaurant = st.selectbox("Pickup kitchen", inputs["world"]["restaurants"],
-                                  format_func=lambda r: r["name"])
-        food_type = st.selectbox("Food type", ["vegetarian", "vegan", "mixed"])
+                                  format_func=lambda r: r["name"], disabled=not custom)
+        food_type = st.selectbox("Food type", list(dict.fromkeys([inputs["donation"]["food_type"], "vegetarian", "vegan", "mixed"])),
+                                 disabled=not custom)
         one, two = st.columns(2)
-        pickup_start = one.time_input("Pickup from", value=time(15, 0))
-        pickup_end = two.time_input("Pickup until", value=time(16, 0))
-        st.caption("Custom fields apply only when customization is checked. Scenario constraints remain in place.")
+        pickup_start = one.time_input("Pickup from", value=time(15, 0), disabled=not custom)
+        pickup_end = two.time_input("Pickup until", value=time(16, 0), disabled=not custom)
+        st.caption("Turn on Customize this donation above to edit the fields. Otherwise the selected scenario is used.")
         submitted = st.form_submit_button("Find a rescue plan →", type="primary", width="stretch")
     if submitted:
         if st.session_state.planner_choice == "Nebius agent" and not (os.getenv("NEBIUS_API_KEY") and os.getenv("NEBIUS_MODEL")):
@@ -140,6 +143,8 @@ def intake():
             st.rerun()
         except Exception as exc:
             notice_error(exc)
+            if st.session_state.get("rescue"):
+                st.info("The board still shows your previous saved rescue. This new request did not replace it.")
 
 
 def neighborhood_map(world, donation=None, plan=None):

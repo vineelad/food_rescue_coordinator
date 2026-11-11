@@ -125,3 +125,33 @@ def test_manual_cancellation_with_no_replacement_preserves_other_bookings():
     assert revised["state"]["status"] == "no_feasible_plan"
     assert revised["state"]["world"]["reservations"] == inputs["world"]["reservations"]
     assert not revised["pending_approval"]
+
+
+def test_custom_donation_fields_apply_only_when_enabled():
+    at = app()
+    assert next(w for w in at.number_input if w.label == "Boxed meals").disabled
+    at.checkbox(key="customize").check().run()
+    meals = next(w for w in at.number_input if w.label == "Boxed meals")
+    assert not meals.disabled
+    meals.set_value(45)
+    at.selectbox(key="planner_choice").select("Nearest-shelter baseline")
+    next(b for b in at.button if b.label == "Find a rescue plan →").click().run()
+    assert not at.exception
+    assert at.session_state.rescue["state"]["donation"]["quantity"] == 45
+
+
+def test_failed_agent_request_identifies_previous_saved_rescue(monkeypatch):
+    at = app()
+    original = plan_from_app(at)
+    monkeypatch.setenv("NEBIUS_API_KEY", "test-not-a-real-key")
+    monkeypatch.setenv("NEBIUS_MODEL", "test-model")
+
+    def fail(*args, **kwargs):
+        raise ValueError("The agent could not finish a validated pickup proposal.")
+
+    monkeypatch.setattr("food_rescue.workflow.agent_plan", fail)
+    at.selectbox(key="planner_choice").select("Nebius agent")
+    next(b for b in at.button if b.label == "Find a rescue plan →").click().run()
+    assert not at.exception
+    assert at.session_state.rescue["thread_id"] == original["thread_id"]
+    assert any("previous saved rescue" in message.value for message in at.info)

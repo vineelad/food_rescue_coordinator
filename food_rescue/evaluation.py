@@ -60,6 +60,7 @@ def score(inputs: dict, outputs: dict, reference_outputs: dict) -> dict:
         "allocation_rate": meals / donation["quantity"],
         "tool_calls": len(trajectories),
         "total_tokens": sum(h["plan"].get("total_tokens", 0) for h in history if h["event"] == "plan"),
+        "submission_retries": sum(h["plan"].get("submission_retries", 0) for h in history if h["event"] == "plan"),
         "latency_seconds": outputs["latency_seconds"],
     }
 

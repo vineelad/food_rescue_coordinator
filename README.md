@@ -182,6 +182,7 @@ dataset version when changing scenarios rather than silently mixing versions.
 | `recovery_pass` | Cancellation applied; revised plan scheduled without cancelled driver |
 | `scheduled_meals` / `allocation_rate` | Meals allocated to confirmed pickups, not delivered meals |
 | `tool_calls` / `total_tokens` / `latency_seconds` | Agent effort and run time, including replanning |
+| `submission_retries` | Follow-up attempts when the model ended without an accepted structured plan |
 
 Never interpret validity alone as task success: no reservations is vacuously valid,
 but failing to schedule a feasible donation fails `outcome_pass`. We score feasible
@@ -208,6 +209,10 @@ benchmark, not evidence of real-world dispatch reliability.
 Tests include persisted approval/resume across connections, rejection without
 reservations, capacity and timing violations, duplicate booking prevention,
 cancellation recovery, and a real LangChain tool loop with a scripted model.
+The agent makes up to two follow-up attempts if a model ends with prose or an
+unaccepted proposal instead of submitting a valid plan. Unsubmitted text never
+creates reservations. If retries fail, the UI identifies the previous saved rescue
+so it cannot be mistaken for the result of the failed request.
 The scripted model test does not validate a particular Nebius model's behavior.
 
 ## Current scope and next increments

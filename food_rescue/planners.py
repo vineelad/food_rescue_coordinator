@@ -5,6 +5,7 @@ import os
 from typing import Literal
 
 from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, ConfigDict, Field
@@ -130,11 +131,27 @@ def agent_plan(world: dict, donation: dict, model=None) -> dict:
     result = agent.invoke({"messages": [{"role": "user", "content":
         "Coordinate this donation. Inspect its details and the current world, then submit a plan."}]},
         config={"recursion_limit": 50})
+    submission_retries = 0
+    # Some tool-calling models finish with prose instead of the authoritative tool.
+    # Continue the same conversation; never turn that prose into an approved plan.
+    while not submissions and submission_retries < 2:
+        submission_retries += 1
+        result = agent.invoke({"messages": result["messages"] + [HumanMessage(content=
+            "Your last response did not produce an accepted submit_plan call. "
+            "Use the existing tool results to finish the task now. For a proposed plan, "
+            "validate the complete legs and fix errors, then CALL submit_plan with status, "
+            "legs, and explanation. If information is missing or no plan is feasible, "
+            "CALL submit_plan with the appropriate status and empty legs. A prose answer "
+            "does not submit a plan. Do not invent missing facts or change the donation.") ]},
+            config={"recursion_limit": 50})
     tokens = 0
     for message in result["messages"]:
         tokens += (getattr(message, "usage_metadata", None) or {}).get("total_tokens", 0)
         for call in getattr(message, "tool_calls", []):
             trajectory.append({"name": call["name"], "args": call["args"]})
     if not submissions:
-        raise ValueError("Agent ended without a valid submit_plan tool call.")
-    return dict(submissions[-1], trajectory=trajectory, total_tokens=tokens)
+        raise ValueError("The agent could not finish a validated pickup proposal after three attempts. "
+                         "Try again or choose the nearest-shelter baseline. "
+                         "No pickups were reserved for this request.")
+    return dict(submissions[-1], trajectory=trajectory, total_tokens=tokens,
+                submission_retries=submission_retries)

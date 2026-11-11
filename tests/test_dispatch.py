@@ -134,3 +134,48 @@ def test_langsmith_sdk_evaluation_offline(monkeypatch):
     rows = list(experiment)
     feedback = rows[0]["evaluation_results"]["results"]
     assert next(f.score for f in feedback if f.key == "outcome_pass") == 1
+
+
+def scripted_tool_model(responses):
+    from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
+
+    class ToolModel(FakeMessagesListChatModel):
+        def bind_tools(self, tools, **kwargs):
+            return self
+
+    return ToolModel(responses=responses)
+
+
+@pytest.mark.parametrize("invalid_first_submission", [False, True])
+def test_agent_recovers_from_missing_or_rejected_submission(invalid_first_submission):
+    from langchain_core.messages import AIMessage
+
+    world, donation = make_world(), make_donation()
+    plan = baseline(world, donation)
+    responses = [AIMessage(content="", tool_calls=[{"name": "inspect_donation", "args": {}, "id": "inspect"}])]
+    if invalid_first_submission:
+        invalid = deepcopy(plan)
+        invalid["legs"][0]["quantity"] = 1000
+        responses.append(AIMessage(content="", tool_calls=[{"name": "submit_plan", "args": invalid, "id": "invalid"}]))
+    responses.extend([
+        AIMessage(content="I have prepared the plan."),
+        AIMessage(content="", tool_calls=[{"name": "validate_candidate", "args": {"legs": plan["legs"]}, "id": "validate"}]),
+        AIMessage(content="", tool_calls=[{"name": "submit_plan", "args": plan, "id": "submit"}]),
+        AIMessage(content="Proposal ready for approval."),
+    ])
+    result = agent_plan(world, donation, model=scripted_tool_model(responses))
+    assert result["submission_retries"] == 1
+    assert result["legs"] == plan["legs"]
+    assert not validate_plan(world, donation, result)
+    assert not world["reservations"]
+
+
+def test_agent_exhausts_submission_retries_without_reserving():
+    from langchain_core.messages import AIMessage
+
+    world = make_world()
+    model = scripted_tool_model([AIMessage(content="Prose is not a submitted plan.") for _ in range(4)])
+    with pytest.raises(ValueError, match="after three attempts"):
+        agent_plan(world, make_donation(), model=model)
+    assert model.i == 3
+    assert not world["reservations"]
