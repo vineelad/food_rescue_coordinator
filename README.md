@@ -69,7 +69,7 @@ hero artwork, a neighborhood map, donation customization, plan review, and
 request a plan; select the baseline for an immediate credential-free demo.
 
 Saved rescues share the CLI's SQLite database. Choose **Continue a saved rescue**
-in the sidebar or open a URL with `?rescue=THREAD_ID`. A scripted cancellation
+under **Your dispatch desk** or open a URL with `?rescue=THREAD_ID`. A scripted cancellation
 produces a revised proposal requiring a second approval. A stale decision from
 another tab is refused; refresh before deciding. The approval control resumes
 the real LangGraph interrupt and saves the resulting reservations.

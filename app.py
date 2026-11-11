@@ -19,7 +19,8 @@ from food_rescue.simulation import NEIGHBORHOODS, by_id, make_world
 
 ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / ".env")
-st.set_page_config(page_title="Second Serving · SF Food Rescue", page_icon="🍊", layout="wide")
+st.set_page_config(page_title="Second Serving · SF Food Rescue", page_icon="🍊", layout="wide",
+                   menu_items={"Get help": None, "Report a Bug": None, "About": None})
 
 
 def clock(minutes):
@@ -43,47 +44,21 @@ def hero_image():
 
 
 def styling():
-    st.html("""<style>
-    .stApp { background: #f7f5ef; }
-    .block-container { max-width: 1440px; padding-top: 1.5rem; padding-bottom: 3rem; }
-    h1,h2,h3 { letter-spacing: -.035em; color: #203d39; }
-    h1,h2 { font-family: Georgia, 'Times New Roman', serif !important; }
-    [data-testid="stSidebar"] { background: #edeee5; border-right: 1px solid #dbe0d2; }
-    [data-testid="stMetric"] { background: #fffdf8; border: 1px solid #e0e3d7; padding: 17px 20px; border-radius: 14px; }
-    [data-testid="stMetricValue"] { font-family: Georgia, serif; color: #224c46; }
-    [data-testid="stBaseButton-primary"] { background: #c65d38; border-color: #c65d38; border-radius: 9px; }
-    [data-testid="stBaseButton-secondary"] { border-radius: 9px; }
-    [data-testid="stVerticalBlockBorderWrapper"] { border-radius: 14px; }
-    .masthead { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
-    .wordmark { font-family:Georgia,serif; font-size:27px; font-weight:700; letter-spacing:-1px; }
-    .wordmark span { color:#c65d38; }
-    .tag { font-size:10px; font-weight:700; letter-spacing:1.7px; border:1px solid #bdc8b9; border-radius:30px; padding:7px 11px; }
-    .hero { height:290px; border-radius:18px; overflow:hidden; position:relative; margin-bottom:24px; background:#244b43; }
-    .hero img { height:100%; width:100%; object-fit:cover; object-position:center; }
-    .hero:after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,rgba(23,52,46,.91),rgba(23,52,46,.55) 36%,transparent 70%); }
-    .hero-copy { position:absolute; z-index:1; left:36px; top:29px; max-width:425px; color:#fffaf0; }
-    .hero-copy h1 { font-size:48px; line-height:1.04; color:#fffaf0; margin:12px 0 12px; font-weight:500; }
-    .hero-copy p { font-size:14px; max-width:330px; line-height:1.6; color:#f4f1e6; }
-    .eyebrow { font-size:10px; font-weight:700; letter-spacing:2.4px; text-transform:uppercase; }
-    .route-card { background:#fffdf8; border:1px solid #e0e3d7; border-radius:13px; padding:18px 20px; margin-bottom:12px; }
-    .route-head { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:12px; }
-    .meal-chip { border-radius:30px; background:#e5eddf; color:#315a41; padding:5px 10px; font-size:12px; font-weight:700; white-space:nowrap; }
-    .route-title { font-size:16px; font-weight:650; color:#244b43; }
-    .route-detail { font-size:13px; color:#60736d; line-height:1.7; }
-    .route-times { border-top:1px solid #e6e8dd; margin-top:12px; padding-top:11px; font-size:13px; color:#3e5650; }
-    .stepbar { background:#e8ede2; padding:13px 18px; border-radius:11px; font-size:13px; margin:16px 0; color:#37584d; }
-    .small-note { color:#748079; font-size:12px; margin:20px 0; }
-    @media(max-width:700px) { .hero {height:310px;} .hero-copy {left:22px;right:22px;} .hero-copy h1 {font-size:39px;} .tag{font-size:8px;} }
-    </style>""")
+    st.html("<style>" + (ROOT / "assets/theme.css").read_text(encoding="utf-8") + "</style>")
 
 
 def masthead():
-    st.html(f"""<div class="masthead"><div class="wordmark">second serving<span>↗</span></div>
-    <div class="tag">SAN FRANCISCO · CLASSROOM SIMULATION</div></div>
-    <div class="hero"><img src="data:image/png;base64,{hero_image()}" alt="San Francisco volunteers sharing fresh food beside an orange van, with the Golden Gate Bridge behind them">
-    <div class="hero-copy"><div class="eyebrow">Good food deserves another stop.</div>
-    <h1>A little surplus.<br>A lot of possibility.</h1>
-    <p>Connect neighborhood kitchens with neighbors who need a meal. One thoughtful pickup at a time.</p></div></div>""")
+    st.html(f"""<div class="masthead">
+    <div class="brand"><span class="brand-fruit" aria-hidden="true"></span><div class="wordmark">second serving<span>San Francisco's neighborhood table</span></div></div>
+    <div class="tag"><span class="live-dot"></span> GOOD FOOD. GREAT NEIGHBORS.</div></div>
+    <section class="hero" aria-label="Welcome to Second Serving">
+    <div class="hero-art"><img src="data:image/png;base64,{hero_image()}" alt="San Francisco volunteers sharing fresh food beside an orange van, with the Golden Gate Bridge behind them"></div>
+    <div class="hero-copy"><div class="eyebrow">A little surplus. A lot of possibility.</div>
+    <h1>Made with love.<br><em>Shared with<br>the neighborhood.</em></h1>
+    <p>Good food belongs on a table. Help a local kitchen's extra meals find their next stop.</p>
+    <div class="hero-signoff"><span aria-hidden="true">↗</span> From one good neighbor to another.</div></div>
+    <div class="postcard-stamp" aria-hidden="true">GROWN IN<br><strong>COMMUNITY</strong><br>SAN FRANCISCO</div></section>
+    <div class="neighborhood-ribbon"><span>MISSION</span><i>✳</i><span>SOMA</span><i>✳</i><span>TENDERLOIN</span><i>✳</i><span>CHINATOWN</span><i>✳</i><span>BAYVIEW</span></div>""")
 
 
 def set_active(rescue):
@@ -92,8 +67,8 @@ def set_active(rescue):
     st.query_params["rescue"] = rescue["thread_id"]
 
 
-def sidebar():
-    with st.sidebar:
+def dispatch_settings():
+    with st.expander("Your dispatch desk · settings & saved rescues", expanded=False):
         st.markdown("### Your dispatch desk")
         st.caption("NEIGHBORS HELPING NEIGHBORS")
         st.write("A small local network. A shared table.")
@@ -319,8 +294,8 @@ def main():
                 set_active(load_rescue(query_thread))
             except ValueError:
                 st.query_params.clear()
-    sidebar()
     masthead()
+    dispatch_settings()
     rescue = st.session_state.get("rescue")
     world = rescue["state"]["world"] if rescue else make_world()
     plan = rescue["state"].get("plan", {}) if rescue else {}
@@ -344,16 +319,15 @@ def main():
             if rescue:
                 rescue_board(rescue)
             else:
-                st.markdown("### A city of good connections")
-                st.write("Choose a donation on the left. We'll find a way from a kitchen's surplus to a neighbor's next meal.")
+                st.html('<div class="community-note"><div class="eyebrow">THE NEIGHBORHOOD TABLE</div><h3>A city of good connections.</h3><p>From a kitchen with a little extra to a neighbor who could use a meal. Choose a donation, and let\'s connect the dots.</p></div>')
                 neighborhood_map(world)
                 st.html('<div class="stepbar">Find a match. Check the details. You make the call.</div>')
-                st.caption("Already made a plan in the CLI? Open it from the sidebar and approve it here.")
+                st.caption("Already have a rescue plan? Open it from Your dispatch desk above and approve it here.")
     with agent:
         activity(rescue)
     with lab:
         evaluations()
-    st.html('<div class="small-note">SECOND SERVING / SAN FRANCISCO &nbsp; · &nbsp; A classroom simulation built around community. Meals shown as scheduled have not been collected or delivered.</div>')
+    st.html('<footer class="community-footer"><div class="footer-title">A city that shares,<br><em>is a city that cares.</em></div><div class="footer-detail">SECOND SERVING · SAN FRANCISCO<br><br>A classroom simulation built around community.<br>Scheduled meals have not yet been collected or delivered.</div></footer>')
 
 
 if __name__ == "__main__":
